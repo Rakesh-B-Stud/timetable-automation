@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | Timetable Portal</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #4f46e5, #0ea5a4);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background: white;
+            color: #333;
+            padding: 2rem 3rem;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            width: 350px;
+            text-align: center;
+        }
+        h2 {
+            color: #4f46e5;
+            margin-bottom: 20px;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background: #4f46e5;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            background: #4338ca;
+        }
+        .switch {
+            margin-top: 15px;
+            color: #0ea5a4;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+        .error {
+            color: red;
+            margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 id="form-title">Student Login</h2>
+        <form id="loginForm">
+            <input type="text" id="username" placeholder="Enter USN or Username" required>
+            <input type="password" id="password" placeholder="Enter Password" required>
+            <button type="submit">Login</button>
+            <div class="error" id="error"></div>
+        </form>
+        <div class="switch" id="switchUser">Switch to Admin Login</div>
+    </div>
+
+    <script>
+        let isAdmin = false;
+
+        // Switch between student and admin login
+        document.getElementById("switchUser").addEventListener("click", () => {
+            isAdmin = !isAdmin;
+            document.getElementById("form-title").innerText = isAdmin ? "Admin Login" : "Student Login";
+            document.getElementById("switchUser").innerText = isAdmin ? "Switch to Student Login" : "Switch to Admin Login";
+        });
+
+        // Handle login form submission
+        document.getElementById("loginForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const username = document.getElementById("username").value;
+            const password = document.getElementById("password").value;
+            const error = document.getElementById("error");
+            error.innerText = "";
+
+            const url = isAdmin ? "/login/admin" : "/login/student";
+            const body = isAdmin ? { username, password } : { usn: username, password };
+
+            try {
+                const response = await fetch(url, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(body),
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    if (isAdmin) {
+                        // Redirect to admin dashboard
+                        window.location.href = "/admin.html";
+                    } else {
+                        // Save student info to localStorage
+                        const studentId = localStorage.getItem("studentId");
+const studentName = localStorage.getItem("studentName");
+const studentUSN = localStorage.getItem("studentUSN");
+const studentSection = localStorage.getItem("studentSection");
+
+
+                        // Redirect to student dashboard
+                        window.location.href = "/student.html";
+                    }
+                } else {
+                    error.innerText = data.error || "Login failed";
+                }
+            } catch (err) {
+                error.innerText = "Error: " + err.message;
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Student Dashboard | Timetable Portal</title>
+<style>
+    body {
+        font-family: 'Segoe UI', sans-serif;
+        background: #f0f2f5;
+        margin: 0;
+        padding: 0;
+    }
+    header {
+        background: #4f46e5;
+        color: white;
+        padding: 1rem 2rem;
+        text-align: center;
+    }
+    h1 { margin: 0; font-size: 1.8rem; }
+    .container {
+        max-width: 1000px;
+        margin: 2rem auto;
+        background: white;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    }
+    h2 { color: #4f46e5; margin-bottom: 1rem; }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1rem;
+    }
+    th, td {
+        border: 1px solid #ccc;
+        padding: 8px 12px;
+        text-align: center;
+    }
+    th {
+        background: #4f46e5;
+        color: white;
+    }
+    .info {
+        margin-bottom: 1rem;
+        font-weight: bold;
+    }
+    ul { list-style: none; padding: 0; }
+    li { margin-bottom: 5px; }
+    .teacher-email { font-size: 0.85em; color: #555; display: block; }
+</style>
+</head>
+<body>
+<header>
+    <h1>Student Dashboard</h1>
+</header>
+<div class="container">
+    <div class="info" id="studentInfo"></div>
+
+    <h2>Your Timetable</h2>
+    <table id="timetableTable">
+        <thead>
+            <tr>
+                <th>Day</th>
+                <th>Time</th>
+                <th>Subject</th>
+                <th>Teacher</th>
+                <th>Specialization</th>
+                <th>Students</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td colspan="6">Loading timetable...</td></tr>
+        </tbody>
+    </table>
+
+    <h2>Notifications</h2>
+    <ul id="notificationsList">
+        <li>Loading notifications...</li>
+    </ul>
+</div>
+
+<script>
+    // Get student info from localStorage
+    const studentId = localStorage.getItem("studentId");
+    const studentName = localStorage.getItem("studentName");
+    const studentUSN = localStorage.getItem("studentUSN");
+    const studentSection = localStorage.getItem("studentSection");
+
+    if (!studentId) {
+        alert("No student info found. Please login first.");
+        window.location.href = "/"; // redirect to login
+    }
+
+    document.getElementById("studentInfo").innerText =
+        `Name: ${studentName} | USN: ${studentUSN} | Section: ${studentSection}`;
+
+    // Fetch timetable from API
+    async function loadTimetable() {
+        try {
+            const response = await fetch(`/timetable/${studentSection}`);
+            const data = await response.json();
+            const tbody = document.querySelector("#timetableTable tbody");
+            tbody.innerHTML = "";
+
+            if (!data || data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6">No timetable found.</td></tr>`;
+                return;
+            }
+
+            data.forEach(item => {
+                const teacher = item.teacher || {};
+                const students = item.students || [];
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${item.day}</td>
+                    <td>${item.time}</td>
+                    <td>${item.subject}</td>
+                    <td>${teacher.name || 'N/A'}<span class="teacher-email">${teacher.email || ''}</span></td>
+                    <td>${teacher.specialization || 'N/A'}</td>
+                    <td>${students.join(", ")}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        } catch (err) {
+            const tbody = document.querySelector("#timetableTable tbody");
+            tbody.innerHTML = `<tr><td colspan="6">Error loading timetable: ${err.message}</td></tr>`;
+        }
+    }
+
+    // Fetch notifications from API
+    async function loadNotifications() {
+        try {
+            const response = await fetch(`/notifications/${studentId}`);
+            const data = await response.json();
+            const list = document.getElementById("notificationsList");
+            list.innerHTML = "";
+
+            if (!data || data.length === 0) {
+                list.innerHTML = `<li>No notifications.</li>`;
+                return;
+            }
+
+            data.forEach(n => {
+                const li = document.createElement("li");
+                const time = new Date(n.timestamp).toLocaleString();
+                li.innerText = `[${time}] ${n.message}`;
+                list.appendChild(li);
+            });
+        } catch (err) {
+            const list = document.getElementById("notificationsList");
+            list.innerHTML = `<li>Error loading notifications: ${err.message}</li>`;
+        }
+    }
+
+    // Load data on page load
+    loadTimetable();
+    loadNotifications();
+</script>
+</body>
+</html>

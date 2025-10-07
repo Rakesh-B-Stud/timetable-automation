@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Dashboard | Timetable Portal</title>
+<style>
+    body { font-family: 'Segoe UI', sans-serif; margin:0; background:#f0f2f5; }
+    nav { width:200px; background:#4f46e5; color:white; height:100vh; position:fixed; }
+    nav ul { list-style:none; padding:0; margin:0; }
+    nav ul li { padding:15px; cursor:pointer; border-bottom:1px solid #4338ca; }
+    nav ul li:hover { background:#4338ca; }
+    nav ul li.active { background:#0ea5a4; }
+    .content { margin-left:210px; padding:20px; }
+    h2 { color:#4f46e5; }
+    input, select { padding:8px; margin:5px 0; width:100%; border-radius:6px; border:1px solid #ccc; }
+    button { background:#4f46e5; color:white; border:none; padding:8px 12px; border-radius:6px; cursor:pointer; margin-top:5px; }
+    button:hover { background:#4338ca; }
+    table { width:100%; border-collapse: collapse; margin-top:10px; }
+    th, td { border:1px solid #ccc; padding:8px; text-align:center; }
+   .available { background:#4ade80; color:white; padding:2px 6px; border-radius:4px; }
+.unavailable { background:#f87171; color:white; padding:2px 6px; border-radius:4px; }
+    .hidden { display:none; }
+    .profile-img { width:30px; height:30px; border-radius:50%; }
+    #ttResult { background:#f3f4f6; padding:10px; border-radius:6px; overflow-x:auto; max-height:400px; }
+    #teacherUploadResult, #studentUploadResult, #publishResult { margin-top:10px; font-weight:bold; }
+</style>
+</head>
+<body>
+
+<nav>
+    <ul>
+        <li class="active" data-section="home">Home</li>
+        <li data-section="availability">Teacher Availability</li>
+        <li data-section="uploadTeachers">Upload Teachers</li>
+        <li data-section="uploadStudents">Upload Students</li>
+        <li data-section="generateTimetable">Generate Timetable</li>
+        <li data-section="publishTimetable">Publish Timetable</li>
+    </ul>
+</nav>
+
+<div class="content">
+    <div id="home" class="section">
+        <h2>Welcome to Admin Dashboard</h2>
+        <p>Select an option from the menu to manage teachers, students, or timetables.</p>
+    </div>
+
+    <!-- Teacher Availability -->
+    <div id="availability" class="section hidden">
+        <h2>Teacher Availability</h2>
+        <table id="teacherTable">
+            <thead>
+                <tr><th>Profile</th><th>Name</th><th>Subject</th><th>Availability</th></tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <!-- Upload Teachers -->
+    <div id="uploadTeachers" class="section hidden">
+        <h2>Upload Teachers CSV</h2>
+        <input type="file" id="teacherFile" accept=".csv"><br>
+        <input type="file" id="teacherPic" accept="image/*" multiple><br>
+        <button id="uploadTeacherBtn">Upload Teachers</button>
+        <div id="teacherUploadResult"></div>
+    </div>
+
+    <!-- Upload Students -->
+    <div id="uploadStudents" class="section hidden">
+        <h2>Upload Students CSV</h2>
+        <input type="file" id="studentFile" accept=".csv"><br>
+        <button id="uploadStudentBtn">Upload Students</button>
+        <div id="studentUploadResult"></div>
+    </div>
+<!-- Generate Timetable Section -->
+<!-- Generate Timetable -->
+<div id="generateTimetable" class="section hidden">
+    <h2>Generate Timetable</h2>
+    <label>Section:</label>
+    <input type="text" id="ttSection" placeholder="Ex: V A">
+    <label>Semester:</label>
+    <input type="number" id="ttSemester" placeholder="Ex: 5">
+    <button id="generateBtn">Generate Timetable</button>
+
+    <!-- Add this table to display timetable with availability -->
+    <table id="ttResultTable">
+        <thead>
+            <tr>
+                <th>Day</th>
+                <th>Time</th>
+                <th>Subject</th>
+                <th>Teacher (Availability)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td colspan="4">Timetable will appear here</td></tr>
+        </tbody>
+    </table>
+</div>
+
+
+
+    <!-- Publish Timetable -->
+    <div id="publishTimetable" class="section hidden">
+        <h2>Publish Timetable</h2>
+        <button id="publishBtn">Send Timetable to Students</button>
+        <div id="publishResult"></div>
+    </div>
+
+</div>
+
+<script>
+    // Navigation
+    const sections = document.querySelectorAll('nav ul li');
+    sections.forEach(li => {
+        li.addEventListener('click', () => {
+            sections.forEach(i => i.classList.remove('active'));
+            li.classList.add('active');
+            document.querySelectorAll('.content .section').forEach(sec => sec.classList.add('hidden'));
+            document.getElementById(li.dataset.section).classList.remove('hidden');
+            if(li.dataset.section === "availability") loadTeacherAvailability();
+        });
+    });
+
+    // ----------------------------
+    // Teacher Availability
+    async function loadTeacherAvailability() {
+        const tbody = document.querySelector('#teacherTable tbody');
+        tbody.innerHTML = '';
+        try {
+            const res = await fetch('/teachers');
+            const data = await res.json();
+            data.forEach(t => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><img src="${t.profile_pic || 'https://via.placeholder.com/30'}" class="profile-img"></td>
+                    <td>${t.name}</td>
+                    <td>${t.subject}</td>
+                    <td>
+                        <button class="${t.availability=='available'?'available':'unavailable'}" onclick="toggleAvailability(${t.id}, this)">
+                        ${t.availability=='available'?'Available':'Unavailable'}</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } catch(e) { console.error(e); }
+    }
+
+    async function toggleAvailability(id, btn) {
+        try {
+            const res = await fetch(`/teacher/${id}/toggle`, {method:'POST'});
+            const data = await res.json();
+            btn.className = data.availability=='available'?'available':'unavailable';
+            btn.innerText = data.availability=='available'?'Available':'Unavailable';
+        } catch(e){ console.error(e);}
+    }
+
+    // ----------------------------
+    // Upload Teachers
+    document.getElementById('uploadTeacherBtn').addEventListener('click', async ()=>{
+        const file = document.getElementById('teacherFile').files[0];
+        const pics = document.getElementById('teacherPic').files;
+        if(!file){ alert('Select CSV'); return; }
+        const formData = new FormData();
+        formData.append('file', file);
+        for(let i=0;i<pics.length;i++){ formData.append('pics', pics[i]); }
+        try{
+            const res = await fetch('/upload/teachers',{method:'POST',body:formData});
+            const data = await res.json();
+            document.getElementById('teacherUploadResult').innerText = data.message || data.error;
+        }catch(e){ console.error(e);}
+    });
+
+    // ----------------------------
+    // Upload Students
+    document.getElementById('uploadStudentBtn').addEventListener('click', async ()=>{
+        const file = document.getElementById('studentFile').files[0];
+        if(!file){ alert('Select CSV'); return; }
+        const formData = new FormData();
+        formData.append('file', file);
+        try{
+            const res = await fetch('/upload/students',{method:'POST',body:formData});
+            const data = await res.json();
+            document.getElementById('studentUploadResult').innerText = data.message || data.error;
+        }catch(e){ console.error(e);}
+    });
+
+    // ----------------------------
+    // Generate Timetable
+// ----------------------------
+// Generate Timetable
+// ----------------------------
+// Generate Timetable with Availability
+document.getElementById('generateBtn').addEventListener('click', async ()=>{
+    const section = document.getElementById('ttSection').value;
+    const semester = document.getElementById('ttSemester').value;
+    if(!section || !semester){ alert('Enter section and semester'); return; }
+    try{
+        const res = await fetch('/generate/timetable',{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({section, semester})
+        });
+        const data = await res.json();
+
+        const tbody = document.querySelector('#ttResultTable tbody');
+        tbody.innerHTML = ''; // clear old timetable
+
+        if (!data.timetable || data.timetable.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4">No timetable generated.</td></tr>`;
+            return;
+        }
+
+        // Render each timetable entry as a table row
+        data.timetable.forEach(entry => {
+            const availabilityClass = entry.teacher.availability === 'available' ? 'available' : 'unavailable';
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${entry.day}</td>
+                <td>${entry.time}</td>
+                <td>${entry.subject}</td>
+                <td><span class="${availabilityClass}">${entry.teacher.name || 'N/A'}</span></td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+    } catch(e){ 
+        console.error(e);
+        const tbody = document.querySelector('#ttResultTable tbody');
+        tbody.innerHTML = `<tr><td colspan="4">Error generating timetable: ${e.message}</td></tr>`;
+    }
+});
+
+    // ----------------------------
+    // Publish Timetable
+    document.getElementById('publishBtn').addEventListener('click', async ()=>{
+        try{
+            const res = await fetch('/publish/timetable',{method:'POST'});
+            const data = await res.json();
+            document.getElementById('publishResult').innerText = data.message || data.error;
+        }catch(e){ console.error(e);}
+    });
+
+</script>
+</body>
+</html>

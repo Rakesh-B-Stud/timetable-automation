@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV Upload - Class Timetable</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f9;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background-color: #4f46e5;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-size: 1.8em;
+            font-weight: bold;
+        }
+
+        main {
+            max-width: 800px;
+            margin: 40px auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        form {
+            margin-bottom: 30px;
+        }
+
+        input[type="file"] {
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            display: block;
+            margin-bottom: 15px;
+        }
+
+        button {
+            background-color: #4f46e5;
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #4338ca;
+        }
+
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 6px;
+            background-color: #eef2ff;
+            color: #333;
+        }
+
+        .section {
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 25px;
+            margin-bottom: 25px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        CSV Upload - Class Timetable
+    </header>
+    <main>
+        <div class="section">
+            <h2>Upload Students CSV</h2>
+            <form id="studentForm">
+                <input type="file" id="studentFile" accept=".csv" required>
+                <button type="submit">Upload Students</button>
+            </form>
+            <div id="studentResult" class="result"></div>
+        </div>
+
+        <div class="section">
+            <h2>Upload Teachers CSV</h2>
+            <form id="teacherForm">
+                <input type="file" id="teacherFile" accept=".csv" required>
+                <button type="submit">Upload Teachers</button>
+            </form>
+            <div id="teacherResult" class="result"></div>
+        </div>
+    </main>
+<script>
+    // Upload Students CSV
+    document.getElementById("studentForm").addEventListener("submit", async function(e){
+        e.preventDefault();
+        const fileInput = document.getElementById("studentFile");
+        const file = fileInput.files[0];
+        if(!file){
+            alert("Please select a CSV file for students");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+            const response = await fetch("http://127.0.0.1:8000/upload/students", {
+                method: "POST",
+                body: formData
+            });
+
+            // Ensure response is parsed as JSON
+            const text = await response.text();
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch {
+                data = { error: text }; // fallback if not JSON
+            }
+
+            document.getElementById("studentResult").innerText = data.message || data.error || "Unknown response";
+        } catch (err) {
+            document.getElementById("studentResult").innerText = "Error uploading file: " + err;
+        }
+    });
+
+    // Upload Teachers CSV
+    document.getElementById("teacherForm").addEventListener("submit", async function(e){
+        e.preventDefault();
+        const fileInput = document.getElementById("teacherFile");
+        const file = fileInput.files[0];
+        if(!file){
+            alert("Please select a CSV file for teachers");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+            const response = await fetch("http://127.0.0.1:8000/upload/teachers", {
+                method: "POST",
+                body: formData
+            });
+
+            // Parse JSON safely
+            const text = await response.text();
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch {
+                data = { error: text };
+            }
+
+            document.getElementById("teacherResult").innerText = data.message || data.error || "Unknown response";
+        } catch (err) {
+            document.getElementById("teacherResult").innerText = "Error uploading file: " + err;
+        }
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,7 @@
+venv/
+.git/
+__pycache__/
+*.pyc
+.env
+# exclude local sqlite DB unless you want read-only bundled
+# timetable.db
